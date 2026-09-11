@@ -24,10 +24,10 @@ plugins {
 stonecutter {
 	// The root project is the Tree
 	create(rootProject) {
-		versions("26.2", "26.1")
+		versions("26.2")
 		vcsVersion = "26.2"
 	}
 }
 
 // Should match your modid
-rootProject.name = "modid"
+rootProject.name = "ftsmp"

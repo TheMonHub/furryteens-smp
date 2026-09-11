@@ -1,6 +1,6 @@
 {
     "required": true,
-    "package": "io.github.teamfurrydevs.modid.mixin",
+    "package": "net.themonhub.ftsmp.mixin",
     "compatibilityLevel": "${java_compat_version}",
     "mixins": [
         "ExampleMixin"

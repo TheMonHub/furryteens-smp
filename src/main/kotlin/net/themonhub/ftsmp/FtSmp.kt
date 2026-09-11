@@ -1,12 +1,12 @@
-package io.github.teamfurrydevs.modid
+package net.themonhub.ftsmp
 
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.Identifier
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-object ExampleMod : ModInitializer {
-	const val MOD_ID: String = "modid"
+object FtSmp : ModInitializer {
+	const val MOD_ID: String = "ftsmp"
 
 	val LOGGER: Logger = LoggerFactory.getLogger(MOD_ID)
 

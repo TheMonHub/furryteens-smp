@@ -1,4 +1,4 @@
-package io.github.teamfurrydevs.modid.mixin;
+package net.themonhub.ftsmp.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,29 +1,29 @@
 {
     "schemaVersion": 1,
-    "id": "modid",
+    "id": "ftsmp",
     "version": "${version}",
-    "name": "Name",
-    "description": "Description",
+    "name": "Furryteens SMP",
+    "description": "A mod made for furryteens SMP",
     "authors": [
-        "Somebody"
+        "TheMonHub"
     ],
     "contact": {
-        "homepage": "https://example.com",
-        "sources": "https://example.com"
+        "homepage": "https://github.com/TheMonHub/furryteens-smp",
+        "sources": "https://github.com/TheMonHub/furryteens-smp"
     },
     "license": "CC0-1.0",
-    "icon": "assets/modid/icon.png",
+    "icon": "assets/ftsmp/icon.png",
     "environment": "*",
     "entrypoints": {
         "main": [
             {
-                "value": "io.github.teamfurrydevs.modid.ExampleMod",
+                "value": "net.themonhub.ftsmp.FtSmp",
                 "adapter": "kotlin"
             }
         ]
     },
     "mixins": [
-        "modid.mixins.json"
+        "ftsmp.mixins.json"
     ],
     "depends": {
         "fabricloader": ">=${loader_version}",

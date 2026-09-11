@@ -72,7 +72,7 @@ tasks.processResources {
 		)
 	}
 
-	filesMatching("modid.mixins.json") {
+	filesMatching("ftsmp.mixins.json") {
 		expand(
 			"java_compat_version" to javaCompatVersion
 		)
