@@ -1,0 +1,14 @@
+{
+    "required": true,
+    "package": "io.github.teamfurrydevs.modid.mixin",
+    "compatibilityLevel": "${java_compat_version}",
+    "mixins": [
+        "ExampleMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "overwrites": {
+        "requireAnnotations": true
+    }
+}

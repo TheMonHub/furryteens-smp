@@ -1,0 +1,35 @@
+{
+    "schemaVersion": 1,
+    "id": "modid",
+    "version": "${version}",
+    "name": "Name",
+    "description": "Description",
+    "authors": [
+        "Somebody"
+    ],
+    "contact": {
+        "homepage": "https://example.com",
+        "sources": "https://example.com"
+    },
+    "license": "CC0-1.0",
+    "icon": "assets/modid/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            {
+                "value": "io.github.teamfurrydevs.modid.ExampleMod",
+                "adapter": "kotlin"
+            }
+        ]
+    },
+    "mixins": [
+        "modid.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=${loader_version}",
+        "minecraft": "~${minecraft_version}",
+        "java": ">=${java_version}",
+        "fabric-api": "*",
+        "fabric-language-kotlin": "*"
+    }
+}
