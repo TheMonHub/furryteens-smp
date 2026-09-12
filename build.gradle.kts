@@ -20,6 +20,10 @@ repositories {
 		name = "Terraformers"
 		url = uri("https://maven.terraformersmc.com/")
 	}
+	maven {
+		name = "FzzyMaven"
+		url = uri("https://maven.fzzyhmstrs.me/")
+	}
 }
 
 val minecraftVersion = property("minecraft_version") as String
@@ -44,15 +48,16 @@ val javaCompatVersion: JavaVersion
 	}
 
 dependencies {
-	// To change the versions see the gradle.properties file
+	// To change the versions, see the gradle.properties file
 	minecraft("com.mojang:minecraft:${minecraftVersion}")
 	implementation("net.fabricmc:fabric-loader:${loaderVersion}")
 
-	implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version") as String}")
+	implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
     implementation("net.fabricmc:fabric-language-kotlin:${providers.gradleProperty("fabric_kotlin_version").get()}")
+	implementation("me.fzzyhmstrs:fzzy_config:${property("fzzy_config_version")}")
 
 	runtimeOnly("com.ptsmods:devlogin:3.5.1:fabric")
-	runtimeOnly("com.terraformersmc:modmenu:${property("modmenu_version") as String}")
+	runtimeOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 }
 
 tasks.processResources {
