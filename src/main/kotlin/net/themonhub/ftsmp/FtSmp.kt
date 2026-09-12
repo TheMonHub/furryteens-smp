@@ -23,6 +23,7 @@ object FtSmp : ModInitializer {
 
 	override fun onInitialize() {
 		LOGGER.info("I'm feeling fluffy today.")
+		FtSmpConfig.init()
 		AttackHandler.initialize()
 
 		ServerTickEvents.START_LEVEL_TICK.register {

@@ -66,4 +66,6 @@ class FtSmpMainConfig : Config(Identifier.fromNamespaceAndPath(MOD_ID, "config")
 
 object FtSmpConfig {
     var mainConfig = ConfigApi.registerAndLoadConfig(::FtSmpMainConfig)
+
+    fun init(){}
 }
