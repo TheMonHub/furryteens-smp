@@ -90,7 +90,7 @@ object PvpStatus {
 
         val acceptBtn: Component =
             Component.literal(" [Accept] ")
-                .withStyle(UnaryOperator { style: Style? ->
+                .withStyle { style: Style? ->
                     style!!
                         .withColor(ChatFormatting.GREEN)
                         .withBold(true)
@@ -105,11 +105,10 @@ object PvpStatus {
                             )
                         )
                 }
-                )
 
         val denyBtn: Component =
             Component.literal(" [Deny] ")
-                .withStyle(UnaryOperator { style: Style? ->
+                .withStyle { style: Style? ->
                     style!!
                         .withColor(ChatFormatting.RED)
                         .withBold(true)
@@ -124,7 +123,6 @@ object PvpStatus {
                             )
                         )
                 }
-                )
 
         target.sendSystemMessage(
             Component.literal("${player.name.string} has requested a duel with you!").append(acceptBtn).append(denyBtn)
@@ -211,13 +209,6 @@ object PvpStatus {
         rejectedPlayer.sendSystemMessage(
             Component.literal("${player.name.string} has rejected a duel with you!")
         )
-    }
-
-    fun removeDuel(player: Player) {
-        val opponentId = duelsMap.remove(player.uuid)
-        if (opponentId != null) {
-            duelsMap.remove(opponentId)
-        }
     }
 
     fun getInPvpTime(player: Player): Int {

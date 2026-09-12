@@ -66,7 +66,7 @@ tasks.processResources {
 	inputs.property("loader_version", loaderVersion)
 	inputs.property("java_version", javaVersion)
 
-	inputs.property("java_compat_version", javaCompatVersion)
+	inputs.property("java_compat_version", javaCompatMixin)
 
 	filesMatching("fabric.mod.json") {
 		expand(
@@ -79,7 +79,7 @@ tasks.processResources {
 
 	filesMatching("ftsmp.mixins.json") {
 		expand(
-			"java_compat_version" to javaCompatVersion
+			"java_compat_version" to javaCompatMixin
 		)
 	}
 }
