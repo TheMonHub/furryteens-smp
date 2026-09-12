@@ -3,7 +3,7 @@
     "package": "net.themonhub.ftsmp.mixin",
     "compatibilityLevel": "${java_compat_version}",
     "mixins": [
-        "ExampleMixin"
+        "DisconnectMixin"
     ],
     "injectors": {
         "defaultRequire": 1

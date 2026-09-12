@@ -3,16 +3,14 @@ package net.themonhub.ftsmp
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.EntityArgument
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.player.Player
-import net.themonhub.ftsmp.combatlog.CombatLog
-import net.themonhub.ftsmp.pvpstatus.PvpStatus
 import net.themonhub.ftsmp.attackhandler.AttackHandler
+import net.themonhub.ftsmp.pvphandler.PvpHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -26,55 +24,72 @@ object FtSmp : ModInitializer {
 		FtSmpConfig.init()
 		AttackHandler.initialize()
 
-		ServerTickEvents.START_LEVEL_TICK.register {
-			PvpStatus.onServerTick()
+		ServerTickEvents.END_SERVER_TICK.register { server ->
+			PvpHandler.onServerTick(server)
 		}
 
-		ServerPlayerEvents.LEAVE.register { p0 ->
-			PvpStatus.onPlayerLeave(p0)
-			CombatLog.onPlayerLeave(p0)
-		}
-
-		ServerLivingEntityEvents.AFTER_DEATH.register { entity, source ->
+		ServerLivingEntityEvents.AFTER_DEATH.register { entity, _ ->
 			if (entity !is Player) {
 				return@register
 			}
-			PvpStatus.onPlayerDeath(entity)
+			PvpHandler.onPlayerDeath(entity)
 		}
 
 		CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-			dispatcher.register(Commands.literal("duel").then(Commands.argument("target", EntityArgument.player())).executes { context ->
-				val player = context.source.player
-				if (player == null) {
-					context.source.sendFailure(Component.literal("Unable to find the player who sent the duel request"))
-					return@executes 0
-				}
-				if (player == EntityArgument.getPlayer(context, "target")) {
-					context.source.sendFailure(Component.literal("You cannot duel yourself!"))
-					return@executes 0
-				}
 
-				PvpStatus.requestDuel(player, EntityArgument.getPlayer(context, "target"))
+			// /duel <target>
+			dispatcher.register(Commands.literal("duel").then(
+				Commands.argument("target", EntityArgument.player()).executes { context ->
+					val player = context.source.player
+					if (player == null) {
+						context.source.sendFailure(Component.literal("Unable to find the player who sent the duel request"))
+						return@executes 0
+					}
+					if (player == EntityArgument.getPlayer(context, "target")) {
+						context.source.sendFailure(Component.literal("You cannot duel yourself!"))
+						return@executes 0
+					}
 
-				return@executes 0
-			})
-			dispatcher.register(Commands.literal("duel_accept").then(Commands.argument("target", EntityArgument.player())).executes { context ->
+					PvpHandler.requestDuel(player, EntityArgument.getPlayer(context, "target"))
+					return@executes 1
+				}
+			))
+
+			// /duel_accept <target>
+			dispatcher.register(Commands.literal("duel_accept").then(
+				Commands.argument("target", EntityArgument.player()).executes { context ->
+					val player = context.source.player
+					if (player == null) {
+						context.source.sendFailure(Component.literal("Unable to find the player who accepted the duel request"))
+						return@executes 0
+					}
+					PvpHandler.acceptDuel(player, EntityArgument.getPlayer(context, "target"))
+					return@executes 1
+				}
+			))
+
+			// /duel_reject <target>
+			dispatcher.register(Commands.literal("duel_reject").then(
+				Commands.argument("target", EntityArgument.player()).executes { context ->
+					val player = context.source.player
+					if (player == null) {
+						context.source.sendFailure(Component.literal("Unable to find the player who rejected the duel request"))
+						return@executes 0
+					}
+					PvpHandler.rejectDuel(player, EntityArgument.getPlayer(context, "target"))
+					return@executes 1
+				}
+			))
+
+			// /duel_stop
+			dispatcher.register(Commands.literal("duel_stop").executes { context ->
 				val player = context.source.player
 				if (player == null) {
-					context.source.sendFailure(Component.literal("Unable to find the player who accept the duel request"))
+					context.source.sendFailure(Component.literal("Unable to find the player who stopped the duel"))
 					return@executes 0
 				}
-				PvpStatus.acceptDuel(player, EntityArgument.getPlayer(context, "target"))
-				return@executes 0
-			})
-			dispatcher.register(Commands.literal("duel_reject").then(Commands.argument("target", EntityArgument.player())).executes { context ->
-				val player = context.source.player
-				if (player == null) {
-					context.source.sendFailure(Component.literal("Unable to find the player who reject the duel request"))
-					return@executes 0
-				}
-				PvpStatus.rejectDuel(player, EntityArgument.getPlayer(context, "target"))
-				return@executes 0
+				PvpHandler.stopDuel(player)
+				return@executes 1
 			})
 		}
 	}

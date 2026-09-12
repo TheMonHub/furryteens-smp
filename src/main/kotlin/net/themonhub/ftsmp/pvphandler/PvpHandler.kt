@@ -1,4 +1,4 @@
-package net.themonhub.ftsmp.pvpstatus
+package net.themonhub.ftsmp.pvphandler
 
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.ClickEvent.RunCommand
@@ -6,15 +6,15 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.HoverEvent.ShowText
 import net.minecraft.network.chat.Style
 import net.minecraft.server.MinecraftServer
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import net.themonhub.ftsmp.FtSmpConfig
 import java.util.*
-import java.util.function.UnaryOperator
 
 
-object PvpStatus {
+object PvpHandler {
 
     data class DuelRequest(
         val targetId: UUID,
@@ -32,6 +32,7 @@ object PvpStatus {
     private val duelsMap: MutableMap<UUID, UUID> = mutableMapOf()
     private val duelRequests: MutableMap<UUID, DuelRequest> = mutableMapOf()
     private val duelQueue: MutableMap<UUID, QueuedDuel> = mutableMapOf()
+    private val stopDuelRequests: MutableMap<UUID, Long> = mutableMapOf()
 
     private var server: MinecraftServer? = null
 
@@ -53,9 +54,6 @@ object PvpStatus {
         if (inCombat) {
             val decayTime = FtSmpConfig.mainConfig.pvp.inCombatDecayTime.get()
             pvpMap[player.uuid] = decayTime * 20
-            player.sendOverlayMessage(
-                Component.literal("You are in combat!\nYou will be out of combat in $decayTime seconds.")
-            )
             return
         }
         pvpMap.remove(player.uuid)
@@ -95,7 +93,7 @@ object PvpStatus {
                         .withColor(ChatFormatting.GREEN)
                         .withBold(true)
                         .withClickEvent(
-                            RunCommand("/duel_accept")
+                            RunCommand("/duel_accept " + player.name.string)
                         )
                         .withHoverEvent(
                             ShowText(
@@ -113,7 +111,7 @@ object PvpStatus {
                         .withColor(ChatFormatting.RED)
                         .withBold(true)
                         .withClickEvent(
-                            RunCommand("/duel_reject")
+                            RunCommand("/duel_reject " + player.name.string)
                         )
                         .withHoverEvent(
                             ShowText(
@@ -176,7 +174,7 @@ object PvpStatus {
         acceptedPlayer.sendOverlayMessage(noMoveWarning)
 
         player.sendSystemMessage(
-            Component.literal("You have accepted a duel with ${acceptedPlayer.name.string}!\n")
+            Component.literal("You have accepted a duel with ${acceptedPlayer.name.string}!")
         )
         acceptedPlayer.sendSystemMessage(
             Component.literal("${player.name.string} has accepted a duel with you!")
@@ -204,10 +202,72 @@ object PvpStatus {
         duelRequests.remove(rejectedPlayer.uuid)
 
         player.sendSystemMessage(
-            Component.literal("You have rejected a duel with ${rejectedPlayer.name.string}!\n")
+            Component.literal("You have rejected a duel with ${rejectedPlayer.name.string}!")
         )
         rejectedPlayer.sendSystemMessage(
             Component.literal("${player.name.string} has rejected a duel with you!")
+        )
+    }
+
+    fun stopDuel(player: Player) {
+        server = extractServer(player) ?: server
+
+        val opponentId = duelsMap[player.uuid]
+        if (opponentId == null) {
+            player.sendSystemMessage(Component.literal("You are not in a duel!"))
+            return
+        }
+
+        val opponent = getPlayer(opponentId, player)
+        val timeLimit = FtSmpConfig.mainConfig.pvpDuel.duelRequestTimeLimit.get()
+        val opponentReqTime = stopDuelRequests[opponentId]
+
+        if (opponentReqTime != null && (System.currentTimeMillis() - opponentReqTime) / 1000 <= timeLimit) {
+            // Both players agreed to stop the duel
+            stopDuelRequests.remove(player.uuid)
+            stopDuelRequests.remove(opponentId)
+            duelsMap.remove(player.uuid)
+            duelsMap.remove(opponentId)
+
+            val duelStopMsg = Component.literal("Duel stopped by mutual agreement!")
+            player.sendSystemMessage(duelStopMsg)
+            player.sendOverlayMessage(duelStopMsg)
+            opponent?.sendSystemMessage(duelStopMsg)
+            opponent?.sendOverlayMessage(duelStopMsg)
+            return
+        }
+
+        val playerReqTime = stopDuelRequests[player.uuid]
+        if (playerReqTime != null && (System.currentTimeMillis() - playerReqTime) / 1000 <= timeLimit) {
+            player.sendSystemMessage(
+                Component.literal("You have already requested to stop the duel. Waiting for ${opponent?.name?.string ?: "your opponent"} to agree.")
+            )
+            return
+        }
+
+        stopDuelRequests[player.uuid] = System.currentTimeMillis()
+        player.sendSystemMessage(
+            Component.literal("You requested to stop the duel. Waiting for ${opponent?.name?.string ?: "your opponent"} to agree.")
+        )
+
+        val agreeBtn: Component =
+            Component.literal(" [Agree] ")
+                .withStyle { style: Style? ->
+                    style!!
+                        .withColor(ChatFormatting.GREEN)
+                        .withBold(true)
+                        .withClickEvent(
+                            RunCommand("/duel_stop")
+                        )
+                        .withHoverEvent(
+                            ShowText(
+                                Component.literal("Click to agree to stop the duel")
+                            )
+                        )
+                }
+
+        opponent?.sendSystemMessage(
+            Component.literal("${player.name.string} has requested to stop the duel!").append(agreeBtn)
         )
     }
 
@@ -221,11 +281,15 @@ object PvpStatus {
     }
 
     fun isInCombat(player: Player): Boolean {
+        if (duelsMap.containsKey(player.uuid)) return true
         val combatTime = pvpMap[player.uuid]
-        return (combatTime != null && combatTime > 0) || duelsMap.containsKey(player.uuid)
+        return combatTime != null && combatTime > 0
     }
 
-    fun onServerTick() {
+    fun onServerTick(server: MinecraftServer? = null) {
+        if (server != null) {
+            this.server = server
+        }
         val pvpIterator = pvpMap.iterator()
         while (pvpIterator.hasNext()) {
             val (uuid, time) = pvpIterator.next()
@@ -234,12 +298,14 @@ object PvpStatus {
                 pvpIterator.remove()
                 continue
             }
+            if (duelsMap.containsKey(uuid)) {
+                continue
+            }
 
             if (time > 1) {
                 pvpMap[uuid] = time - 1
                 player.sendOverlayMessage(
-                    Component.literal("You are in combat! Do not log off!\n" +
-                            "You will be out of combat in ${(time - 1) / 20 + 1} seconds.")
+                    Component.literal("You are in combat! Do not log off! You will be out of combat in ${(time - 1) / 20 + 1} seconds.")
                 )
             } else {
                 pvpIterator.remove()
@@ -262,6 +328,22 @@ object PvpStatus {
                     Component.literal("Your duel request to $targetName has expired!")
                 )
                 reqIterator.remove()
+            }
+        }
+
+        val stopReqIterator = stopDuelRequests.iterator()
+        while (stopReqIterator.hasNext()) {
+            val (requesterId, timestamp) = stopReqIterator.next()
+            if (!duelsMap.containsKey(requesterId)) {
+                stopReqIterator.remove()
+                continue
+            }
+            if ((now - timestamp) / 1000 > requestLimit) {
+                val requester = getPlayer(requesterId)
+                requester?.sendSystemMessage(
+                    Component.literal("Your request to stop the duel has expired!")
+                )
+                stopReqIterator.remove()
             }
         }
 
@@ -318,14 +400,26 @@ object PvpStatus {
 
                 duelsMap[player1Id] = player2Id
                 duelsMap[player2Id] = player1Id
+                pvpMap.remove(player1Id)
+                pvpMap.remove(player2Id)
                 queueIterator.remove()
+            } else {
+                val remainingSeconds = prepLimit - currentPrepareTime
+                val countdownMsg = Component.literal("Do not move for $remainingSeconds seconds.")
+                p1.sendOverlayMessage(countdownMsg)
+                p2.sendOverlayMessage(countdownMsg)
             }
         }
     }
 
     fun onPlayerDeath(player: Player) {
+
+        setInCombat(player, false)
+
         val opponentId = duelsMap.remove(player.uuid) ?: return
         duelsMap.remove(opponentId)
+        stopDuelRequests.remove(player.uuid)
+        stopDuelRequests.remove(opponentId)
 
         val duelOver = Component.literal("Duel Over!")
         player.sendSystemMessage(duelOver)
@@ -333,6 +427,7 @@ object PvpStatus {
 
         val opponent = getPlayer(opponentId, player)
         if (opponent != null) {
+            setInCombat(opponent, false)
             opponent.sendSystemMessage(duelOver)
             opponent.sendOverlayMessage(duelOver)
         }
@@ -342,16 +437,29 @@ object PvpStatus {
         val opponentId = duelsMap.remove(player.uuid)
         if (opponentId != null) {
             duelsMap.remove(opponentId)
+            stopDuelRequests.remove(opponentId)
             val opponent = getPlayer(opponentId, player)
-            opponent?.sendSystemMessage(
+            if (opponent != null) {
+                setInCombat(opponent, false)
+            }
+            opponent?.sendOverlayMessage(
                 Component.literal("Duel Over: ${player.name.string} left the server!")
             )
         }
 
-        pvpMap.remove(player.uuid)
+        stopDuelRequests.remove(player.uuid)
+
         duelRequests.remove(player.uuid)
         duelRequests.values.removeIf { it.targetId == player.uuid }
         duelQueue.remove(player.uuid)
         duelQueue.values.removeIf { it.acceptedPlayerId == player.uuid }
+
+        if (!FtSmpConfig.mainConfig.pvp.combatLogPrevention.get()) {
+            return
+        }
+        if (isInCombat(player)) {
+            player.hurtServer(player.level() as ServerLevel, player.damageSources().fellOutOfWorld(), 100000F)
+        }
+        pvpMap.remove(player.uuid)
     }
 }
