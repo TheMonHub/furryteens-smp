@@ -3,6 +3,7 @@ package net.themonhub.ftsmp.attackhandler
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.Level
 import net.themonhub.ftsmp.FtSmpConfig
 import net.themonhub.ftsmp.pvphandler.PvpHandler
 
@@ -42,7 +43,7 @@ object AttackHandler {
             val inSafeZone = entity.x in safeZoneRange && entity.z in safeZoneRange && FtSmpConfig.mainConfig.pvpSafeZone.safeZoneEnabled.get()
 
             // If a player is attacking another player inside the safe zone:
-            if (inSafeZone && targetPlayer != null && attackerPlayer != null) {
+            if (inSafeZone && targetPlayer != null && attackerPlayer != null && targetPlayer.level().dimension() == Level.OVERWORLD) {
 
                 // ALLOW: They are actively dueling each other
                 if (isDuelAttack) {
